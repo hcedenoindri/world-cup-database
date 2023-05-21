@@ -1,0 +1,29 @@
+#! /bin/bash
+
+# using if loop to be able to run tests without affecting original database
+
+if [[ $1 == "test" ]]
+then
+  PSQL="psql --username=postgres --dbname=worldcuptest -t --no-align -c"
+else
+  PSQL="psql --username=freecodecamp --dbname=worldcup -t --no-align -c"
+fi
+
+#start by emptying the rows in the tables of the database so we can rerun the file
+$PSQL "TRUNCATE TABLE games, teams"
+# read the games.csv file using cat and apply a while loop to read row by row
+cat games.csv | while IFS="," read YEAR ROUND WINNER OPP WINNER_GOALS OPP_GOALS
+do
+  if [[ $YEAR == year ]]
+  then
+    continue
+  fi
+
+  $PSQL "INSERT INTO teams(name) VALUES($WINNER) ON CONFLICT DO NOTHING"
+  $PSQL "INSERT INTO teams(name) VALUES($OPP) ON CONFLICT DO NOTHING"
+  WINNER_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$WINNER'")
+  OPP_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$OPP'")
+
+  #insert game
+  $PSQL "INSERT INTO games(winner_id,opponent_id,winner_goals,opponent_goals,round,year) VALUES($WINNER_ID, $OPP_ID, $WINNER_GOALS, $OPP_GOALS, '$ROUND', $YEAR)"
+done
